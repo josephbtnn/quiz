@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionnaire de Quiz (Corrigé)</title>
+    <style>
+        /* --- Variables & Styles Globaux (Identiques) --- */
+        :root {
+            --primary-color: #4a90e2; --secondary-color: #50e3c2; --danger-color: #e94f37;
+            --warning-color: #f5a623; --background-color: #f8f9fa; --card-background: #ffffff;
+            --text-color: #343a40; --muted-text-color: #6c757d; --border-color: #dee2e6;
+            --success-color: #28a745; --success-bg-light: #d4edda; --danger-bg-light: #f8d7da;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); --border-radius: 8px; --transition-speed: 0.2s;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; background-color: var(--background-color); color: var(--text-color); padding: 20px; padding-top: 80px; /* Espace pour header fixe */ }
+
+        /* --- Header Fixe (Identique) --- */
+        header {
+            position: fixed; top: 0; left: 0; width: 100%;
+            background-color: var(--card-background); padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        header h1 { color: var(--primary-color); font-size: 1.5em; margin: 0; flex-grow: 1; text-align: left; }
+        header nav button { margin-left: 10px; background: none; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 8px 15px; border-radius: var(--border-radius); /* Ajout rayon */ cursor: pointer; /* Ajout curseur */ transition: background-color var(--transition-speed), color var(--transition-speed); /* Ajout transition */ }
+        header nav button.active, header nav button:hover { background-color: var(--primary-color); color: white; }
+
+        .container { max-width: 800px; margin: 20px auto; background: var(--card-background); padding: 30px; border-radius: var(--border-radius); box-shadow: var(--box-shadow); }
+        h2 { color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 25px; text-align: left; }
+        h3 { color: var(--primary-color); margin-top: 0; margin-bottom: 15px; font-size: 1.2em; }
+        /* Sections (Identique) */
+        .section { display: none; padding-top: 20px; margin-top: 20px; animation: fadeIn 0.5s ease-in-out; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Formulaires (Identique) */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--muted-text-color); font-size: 0.95em; }
+        input[type="text"], textarea { width: 100%; padding: 12px 15px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: var(--border-radius); font-size: 1em; transition: border-color var(--transition-speed), box-shadow var(--transition-speed); }
+        input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.25); }
+        input[type="checkbox"].allow-multiple { margin-left: 10px; vertical-align: middle; }
+        /* Boutons (Identique) */
+        .button { display: inline-flex; align-items: center; justify-content: center; background: var(--primary-color); color: #fff; border: none; padding: 12px 20px; border-radius: var(--border-radius); cursor: pointer; font-size: 1em; font-weight: 500; text-align: center; text-decoration: none; transition: background-color var(--transition-speed), transform var(--transition-speed), box-shadow var(--transition-speed); margin-top: 10px; margin-right: 10px; vertical-align: middle; }
+        .button svg { margin-right: 8px; width: 1em; height: 1em; }
+        .button:hover { background-color: #3a7fc8; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .button:active { transform: translateY(0); box-shadow: none; }
+        .button-secondary { background-color: var(--secondary-color); } .button-secondary:hover { background-color: #40c0a8; }
+        .button-danger { background-color: var(--danger-color); } .button-danger:hover { background-color: #d13f27; }
+        .button-success { background-color: var(--success-color); } .button-success:hover { background-color: #218838; }
+        .button-neutral { background: var(--muted-text-color); } .button-neutral:hover { background: #5a6268; }
+        .button-small { padding: 6px 12px; font-size: 0.85em; }
+        .button-link { background: none; border: none; color: var(--danger-color); padding: 0 5px; margin: 0 0 0 10px; cursor: pointer; font-size: 0.9em; vertical-align: middle; text-decoration: underline; }
+        .button-link:hover { color: #a02d19; }
+        .button:disabled { background-color: #cccccc; cursor: not-allowed; transform: none; box-shadow: none; }
+        /* Blocs Création Question (Identique) */
+        .question-creator-block { border: 1px solid var(--border-color); padding: 20px; margin-bottom: 25px; background-color: var(--card-background); border-radius: var(--border-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
+        .options-creator .option-item { display: flex; align-items: center; margin-bottom: 12px; padding: 8px; border-radius: 4px; transition: background-color var(--transition-speed); }
+        .options-creator .option-item:hover { background-color: #e9ecef; }
+        .options-creator input[type="radio"], .options-creator input[type="checkbox"] { margin-right: 12px; flex-shrink: 0; width: auto; accent-color: var(--primary-color); }
+        .options-creator .option-item input[type="text"] { flex-grow: 1; margin-left: 8px; margin-bottom: 0; padding: 8px 10px; font-size: 0.95em; }
+        .delete-question-btn { position: absolute; top: 15px; right: 15px; }
+        .add-option-btn { margin-top: 5px; }
+        /* Mode Test (Identique) */
+        .quiz-question { margin-bottom: 30px; padding: 25px; background-color: var(--card-background); border-radius: var(--border-radius); box-shadow: var(--box-shadow); border-left: 5px solid var(--primary-color); }
+        .quiz-question p { font-weight: 600; font-size: 1.1em; margin-bottom: 15px; color: var(--primary-color); }
+        .quiz-options label { display: block; margin-bottom: 10px; font-weight: normal; cursor: pointer; padding: 12px 15px; border-radius: var(--border-radius); border: 1px solid var(--border-color); transition: background-color var(--transition-speed), border-color var(--transition-speed); position: relative; overflow: hidden; }
+        .quiz-options label:not(.disabled):hover { background-color: #eef5ff; border-color: var(--primary-color); }
+        .quiz-options label.disabled { cursor: not-allowed; opacity: 0.8; background-color: #f8f9fa; }
+        .quiz-options label.disabled:hover { background-color: #f8f9fa; border-color: var(--border-color); }
+        .quiz-options label.correct-feedback { background-color: var(--success-bg-light); border-color: var(--success-color); color: #155724; font-weight: 500; }
+        .quiz-options label.correct-feedback::after { content: '✔'; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--success-color); font-weight: bold; font-size: 1.2em; }
+        .quiz-options label.incorrect-feedback { background-color: var(--danger-bg-light); border-color: var(--danger-color); color: #721c24; font-weight: 500; }
+        .quiz-options label.incorrect-feedback::after { content: '✖'; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--danger-color); font-weight: bold; font-size: 1.2em; }
+        .quiz-options label.missed-feedback { border: 2px solid var(--success-color); background-color: #fff; }
+        .quiz-options input[type="checkbox"] { margin-right: 12px; accent-color: var(--primary-color); vertical-align: middle; }
+        .quiz-options input[type="checkbox"]:disabled { cursor: not-allowed; }
+        .question-validation-area { margin-top: 20px; border-top: 1px dashed var(--border-color); padding-top: 15px; text-align: right; }
+        /* Résultats (Identique) */
+        #results { text-align: center; font-size: 1.3em; font-weight: 500; padding: 30px; background-color: #e6fffa; border: 1px solid var(--secondary-color); color: #0a5c57; border-radius: var(--border-radius); margin-top: 20px; }
+        #results span { font-weight: 700; color: var(--primary-color); }
+        /* Nav Quiz (Identique) */
+        #quiz-navigation { text-align: center; margin-top: 30px; }
+        /* Section Gérer Quiz (Identique) */
+        #search-quiz { padding: 10px 12px; font-size: 1em; margin-bottom: 20px; width: 100%; border: 1px solid var(--border-color); border-radius: var(--border-radius); }
+        #saved-quizzes-list ul { list-style: none; padding: 0; }
+        #saved-quizzes-list li { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-bottom: 10px; background-color: #fff; transition: transform 0.2s ease-out, box-shadow 0.2s ease-out; }
+        #saved-quizzes-list li:hover { transform: translateY(-2px); box-shadow: 0 3px 6px rgba(0,0,0,0.07); }
+        #saved-quizzes-list .quiz-title { font-weight: 600; color: var(--primary-color); flex-grow: 1; margin-right: 15px; }
+        #saved-quizzes-list .quiz-actions button { margin-left: 8px; }
+        #no-quizzes-message { color: var(--muted-text-color); text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: var(--border-radius); }
+        /* Feedback Global (Identique) */
+         #global-feedback { padding: 15px; margin-bottom: 20px; border-radius: var(--border-radius); font-weight: 500; text-align: center; display: none; animation: fadeIn 0.5s; }
+         #global-feedback.success { background-color: var(--success-bg-light); color: #155724; border: 1px solid var(--success-color); }
+         #global-feedback.error { background-color: var(--danger-bg-light); color: #721c24; border: 1px solid var(--danger-color); }
+         #global-feedback.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        /* Responsive (Identique) */
+        @media (max-width: 768px) {
+            body { padding: 10px; padding-top: 120px; } header { flex-wrap: wrap; justify-content: center;}
+            header h1 { margin-bottom: 10px; width: 100%; text-align: center; } header nav { width: 100%; text-align: center; } header nav button { margin: 5px; }
+            .container { padding: 20px; }
+            #saved-quizzes-list li { flex-direction: column; align-items: flex-start; }
+            #saved-quizzes-list .quiz-actions { margin-top: 10px; width: 100%; display: flex; justify-content: flex-end; flex-wrap: wrap;}
+            #saved-quizzes-list .quiz-actions button { margin-top: 5px; margin-bottom: 5px; }
+        }
+        @media (max-width: 600px) {
+            .button { width: 100%; margin: 10px 0 0 0; } .delete-question-btn { position: static; display: block; margin-top: 15px; text-align: center; }
+            .options-creator .option-item { flex-wrap: wrap; } .options-creator .option-item input[type="text"] { margin-left: 0; margin-top: 5px; width: calc(100% - 60px); }
+            .options-creator .option-item .button-link { margin-left: auto; } .quiz-options label::after { font-size: 1em; right: 10px; }
+            .question-validation-area { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Gestionnaire de Quiz</h1>
+        <nav>
+            <button id="nav-manage" class="button button-small active" onclick="app.switchMode('manager')">Gérer</button>
+            <button id="nav-create" class="button button-small" onclick="app.switchMode('creator', true)">Créer</button>
+             <!-- Le mode Test n'est accessible que depuis Gérer -->
+        </nav>
+    </header>
+
+    <div class="container">
+        <!-- Zone de Feedback Globale -->
+        <div id="global-feedback"></div>
+
+        <!-- SECTION GÉRER -->
+        <section id="manager-section" class="section">
+            <h2>Mes Quiz Sauvegardés</h2>
+             <div class="form-group">
+                <input type="text" id="search-quiz" placeholder="Rechercher un quiz par titre..." oninput="app.renderSavedQuizzesList()">
+            </div>
+            <div id="saved-quizzes-list">
+                <ul id="quiz-list-ul"></ul>
+                 <p id="no-quizzes-message" style="display: none;">Aucun quiz trouvé.</p>
+            </div>
+             <button type="button" class="button button-primary" onclick="app.switchMode('creator', true)">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/></svg>
+                 Créer un Nouveau Quiz
+             </button>
+        </section>
+
+        <!-- SECTION CRÉATION -->
+        <section id="creator-section" class="section">
+             <h2 id="creator-title">Créer un Nouveau Quiz</h2>
+             <input type="hidden" id="editing-quiz-id">
+            <div class="form-group">
+                <label for="quiz-title">Titre du Quiz :</label>
+                <input type="text" id="quiz-title" placeholder="Ex: Capitales du Monde">
+            </div>
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 30px 0;">
+            <h3>Questions</h3>
+            <div id="questions-container"></div>
+            <button type="button" class="button button-secondary" onclick="app.addQuestionFields()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/></svg>
+                Ajouter une Question
+            </button>
+             <button type="button" class="button button-success" onclick="app.saveQuiz()">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save" viewBox="0 0 16 16"><path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/></svg>
+                 Sauvegarder le Quiz
+             </button>
+              <button type="button" class="button button-neutral" onclick="app.switchMode('manager')"> Annuler </button>
+        </section>
+
+         <!-- SECTION TEST -->
+        <section id="taker-section" class="section">
+            <h2 id="quiz-taker-title">Quiz en cours...</h2>
+            <div id="quiz-display-area"></div>
+            <div id="quiz-navigation">
+                 <button id="next-btn" type="button" class="button button-primary" onclick="app.nextQuestion()" style="display: none;">
+                     Question Suivante
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right" viewBox="0 0 16 16" style="margin-left: 8px; margin-right: 0;"><path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/></svg>
+                 </button>
+                 <button id="submit-btn" type="button" class="button button-success" onclick="app.submitQuiz()" style="display: none;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                      Terminer le Quiz
+                 </button>
+                  <button type="button" class="button button-neutral" onclick="app.quitQuiz()"> Quitter le Quiz </button>
+            </div>
+        </section>
+
+        <!-- SECTION RÉSULTATS -->
+        <section id="results-section" class="section">
+            <h2>Résultats</h2>
+            <div id="results"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                 <button type="button" onclick="app.switchMode('manager')" class="button button-primary">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-task" viewBox="0 0 16 16" style="margin-right: 8px;"><path fill-rule="evenodd" d="M2 2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5H2zM3 3H2v1h1V3z"/><path d="M5 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM5.5 7a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9zm0 4a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9z"/><path fill-rule="evenodd" d="M1.5 7a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5V7zM2 7h1v1H2V7zm0 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5H2zm1 .5H2v1h1v-1z"/></svg>
+                     Retour à mes Quiz
+                 </button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Encapsulation IIFE
+        (function() {
+            "use strict";
+
+            // --- State ---
+            const state = {
+                currentMode: 'manager', // 'manager', 'creator', 'taker', 'results'
+                savedQuizzes: {}, // { id: quizData }
+                editingQuizId: null,
+                currentQuizInCreator: { title: '', questions: [] },
+                quizTakingState: {
+                    quizId: null, quizData: null, currentQuestionIndex: 0,
+                    userAnswers: [], isCurrentQuestionValidated: false, score: 0
+                }
+            };
+             // --- Global Counter for unique IDs ---
+             // Initialisé à une valeur élevée pour minimiser les chances de collision
+             // si l'utilisateur avait déjà des éléments avec des ID numériques simples.
+             let questionCounter = Date.now();
+
+             // --- DOM References (Identique) ---
+             const dom = {
+                 navButtons: { manager: document.getElementById('nav-manage'), create: document.getElementById('nav-create'), },
+                 sections: { manager: document.getElementById('manager-section'), creator: document.getElementById('creator-section'), taker: document.getElementById('taker-section'), results: document.getElementById('results-section'), },
+                 globalFeedback: document.getElementById('global-feedback'),
+                 manager: { searchInput: document.getElementById('search-quiz'), listUl: document.getElementById('quiz-list-ul'), noQuizzesMsg: document.getElementById('no-quizzes-message'), },
+                 creator: { title: document.getElementById('creator-title'), editingQuizIdInput: document.getElementById('editing-quiz-id'), quizTitleInput: document.getElementById('quiz-title'), questionsContainer: document.getElementById('questions-container'), },
+                 taker: { title: document.getElementById('quiz-taker-title'), displayArea: document.getElementById('quiz-display-area'), nextBtn: document.getElementById('next-btn'), submitBtn: document.getElementById('submit-btn'), },
+                 results: { displayArea: document.getElementById('results'), }
+             };
+
+             // --- Core App Object ---
+             const app = {
+
+                // --- Initialization (Identique) ---
+                init() {
+                    this.loadQuizzesFromStorage();
+                    this.renderSavedQuizzesList();
+                    this.switchMode(state.currentMode);
+                    window.app = this;
+                    console.log("Quiz App Initialized");
+                },
+
+                // --- Mode Switching (Identique) ---
+                switchMode(mode, clearCreator = false) {
+                    state.currentMode = mode;
+                    console.log("Switching mode to:", mode);
+                    Object.values(dom.sections).forEach(section => section.classList.remove('active'));
+                    Object.values(dom.navButtons).forEach(button => button.classList.remove('active'));
+                    if (dom.sections[mode]) dom.sections[mode].classList.add('active');
+                    if (dom.navButtons[mode]) dom.navButtons[mode].classList.add('active');
+                    this.hideFeedback();
+                    if (mode === 'manager') { this.renderSavedQuizzesList(); }
+                    else if (mode === 'creator') {
+                        if (clearCreator || !state.editingQuizId) { this.clearCreatorForm(); }
+                        dom.creator.title.textContent = state.editingQuizId ? "Modifier le Quiz" : "Créer un Nouveau Quiz";
+                    }
+                },
+
+                 // --- Feedback (Identique) ---
+                 showFeedback(message, type = 'info', duration = 4000) {
+                    dom.globalFeedback.textContent = message;
+                    dom.globalFeedback.className = `feedback-${type}`; dom.globalFeedback.style.display = 'block';
+                    setTimeout(() => this.hideFeedback(), duration);
+                },
+                hideFeedback() { dom.globalFeedback.style.display = 'none'; },
+
+                // --- Local Storage (Identique) ---
+                 loadQuizzesFromStorage() {
+                     state.savedQuizzes = {};
+                     try {
+                         for (let i = 0; i < localStorage.length; i++) {
+                             const key = localStorage.key(i);
+                             if (key.startsWith('quiz_')) {
+                                 const quizData = JSON.parse(localStorage.getItem(key));
+                                 if (quizData?.id && quizData.title && Array.isArray(quizData.questions)) { state.savedQuizzes[quizData.id] = quizData; }
+                                 else { console.warn(`Invalid quiz data in LS: ${key}. Removing.`); localStorage.removeItem(key); i--; }
+                             }
+                         }
+                         console.log("Loaded quizzes:", Object.keys(state.savedQuizzes).length);
+                     } catch (error) { console.error("Error loading quizzes:", error); this.showFeedback("Erreur chargement des quiz.", "error"); }
+                 },
+                saveQuizToStorage(quizData) {
+                     if (!quizData || !quizData.id) { console.error("Cannot save: Invalid data or missing ID."); return false; }
+                     try { localStorage.setItem(`quiz_${quizData.id}`, JSON.stringify(quizData)); state.savedQuizzes[quizData.id] = quizData; return true; }
+                     catch (error) { console.error("Error saving quiz:", error); if (error.name === 'QuotaExceededError') this.showFeedback("Erreur: Stockage plein!", "error"); else this.showFeedback("Erreur sauvegarde.", "error"); return false; }
+                 },
+                deleteQuizFromStorage(quizId) {
+                     if (!quizId || !state.savedQuizzes[quizId]) return;
+                     if (confirm(`Supprimer le quiz "${state.savedQuizzes[quizId].title}" ?`)) {
+                         try { localStorage.removeItem(`quiz_${quizId}`); delete state.savedQuizzes[quizId]; this.renderSavedQuizzesList(); this.showFeedback("Quiz supprimé.", "success"); if (state.editingQuizId === quizId) this.clearCreatorForm(); }
+                         catch (error) { console.error("Error deleting quiz:", error); this.showFeedback("Erreur suppression.", "error"); }
+                     }
+                 },
+
+                 // --- Manager View (Identique) ---
+                 renderSavedQuizzesList() {
+                    const searchTerm = dom.manager.searchInput.value.toLowerCase(); const listUl = dom.manager.listUl; listUl.innerHTML = ''; let foundQuizzes = 0;
+                    const sortedQuizIds = Object.keys(state.savedQuizzes).sort((a, b) => state.savedQuizzes[a].title.localeCompare(state.savedQuizzes[b].title));
+                    sortedQuizIds.forEach(id => {
+                        const quiz = state.savedQuizzes[id];
+                        if (quiz.title.toLowerCase().includes(searchTerm)) {
+                            const li = document.createElement('li');
+                            li.innerHTML = `<span class="quiz-title">${quiz.title}</span> <div class="quiz-actions"> <button class="button button-small button-primary" onclick="app.startQuiz('${id}')">Tester</button> <button class="button button-small button-warning" onclick="app.loadQuizForEditing('${id}')">Modifier</button> <button class="button button-small button-danger" onclick="app.deleteQuizFromStorage('${id}')">Supprimer</button> </div>`;
+                            listUl.appendChild(li); foundQuizzes++;
+                        }
+                    });
+                    dom.manager.noQuizzesMsg.style.display = foundQuizzes === 0 ? 'block' : 'none';
+                 },
+
+                // --- Creator Logic ---
+                clearCreatorForm() {
+                     state.editingQuizId = null; state.currentQuizInCreator = { title: '', questions: [] };
+                     dom.creator.editingQuizIdInput.value = ''; dom.creator.quizTitleInput.value = ''; dom.creator.questionsContainer.innerHTML = '';
+                     this.addQuestionFields(); // Add one blank question
+                     dom.creator.title.textContent = "Créer un Nouveau Quiz";
+                     console.log("Creator form cleared.");
+                 },
+
+                 addQuestionFields() {
+                    console.log("Adding question field. Counter before:", questionCounter); // Debug log
+                    questionCounter++; // Utilise et incrémente le compteur global
+                    const questionBlockId = questionCounter; // ID unique basé sur le compteur
+                    console.log("New question block ID:", questionBlockId); // Debug log
+
+                    const questionsContainer = dom.creator.questionsContainer;
+                    const questionDiv = document.createElement('div');
+                    questionDiv.classList.add('question-creator-block');
+                    questionDiv.id = `question-block-${questionBlockId}`; // Utilise l'ID unique
+
+                    questionDiv.innerHTML = `
+                        <button type="button" class="button button-small button-danger delete-question-btn" onclick="app.removeQuestionBlock('${questionBlockId}')">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16" style="vertical-align: -1px;"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg> Supprimer
+                        </button>
+                        <h3>Question ${questionBlockId}</h3> <!-- Utiliser l'ID ici peut être déroutant, renuméroté ensuite -->
+                        <div class="form-group">
+                            <label for="qtext-${questionBlockId}">Texte de la question:</label>
+                            <input type="text" id="qtext-${questionBlockId}" class="question-text-input" placeholder="...">
+                        </div>
+                        <div class="form-group">
+                            <label>Options:</label>
+                            <label style="font-weight: normal; font-size: 0.9em;"> Plusieurs rép. correctes ? <input type="checkbox" class="allow-multiple" onchange="app.updateInputType(this)"></label>
+                            <div class="options-creator" id="options-list-${questionBlockId}">
+                                ${this.generateOptionHTML(questionBlockId, 0, 'radio')}
+                                ${this.generateOptionHTML(questionBlockId, 1, 'radio')}
+                            </div>
+                            <button type="button" class="button button-small add-option-btn button-secondary" onclick="app.addOptionToQuestion(this)">+ Ajouter Option</button>
+                        </div>`;
+                    questionsContainer.appendChild(questionDiv);
+                    this.renumberQuestionHeaders(); // Re-numérote les titres H3 proprement
+                 },
+
+                generateOptionHTML(questionId, optionIndex, inputType = 'radio') {
+                     // Identique
+                     const deleteButtonHTML = optionIndex > 1 ? `<button type="button" class="button-link" onclick="app.removeOptionFromQuestion(this)">Supprimer</button>` : '';
+                     return `
+                        <div class="option-item" data-option-index="${optionIndex}">
+                            <input type="${inputType}" name="correct-${questionId}${inputType === 'checkbox' ? '[]' : ''}" value="${optionIndex}" ${inputType === 'radio' ? 'required' : ''}>
+                            <input type="text" class="option-text-input" placeholder="Option ${optionIndex + 1}">
+                            ${deleteButtonHTML}
+                        </div>`;
+                 },
+
+                 addOptionToQuestion(button) { /* Identique */
+                     const optionsList = button.previousElementSibling; const questionBlock = button.closest('.question-creator-block'); const questionId = questionBlock.id.split('-')[2]; const currentOptionsCount = optionsList.children.length;
+                     if (currentOptionsCount >= 5) { alert("Maximum 5 options."); return; }
+                     const allowMultipleCheckbox = questionBlock.querySelector('.allow-multiple'); const inputType = allowMultipleCheckbox.checked ? 'checkbox' : 'radio';
+                     const newOptionHTML = this.generateOptionHTML(questionId, currentOptionsCount, inputType); optionsList.insertAdjacentHTML('beforeend', newOptionHTML);
+                 },
+
+                removeOptionFromQuestion(button) { /* Identique */
+                     const optionItem = button.closest('.option-item'); const optionsList = optionItem.parentElement;
+                     if (optionsList.children.length <= 2) { alert("Minimum 2 options."); return; }
+                     optionItem.remove();
+                 },
+
+                removeQuestionBlock(blockId) { /* Utilise blockId qui vient du compteur unique */
+                     const blockToRemove = document.getElementById(`question-block-${blockId}`);
+                     if (!blockToRemove) { console.error(`Block with ID question-block-${blockId} not found for deletion.`); return; } // Sécurité
+                     if (document.querySelectorAll('.question-creator-block').length <= 1) { alert("Minimum 1 question."); return; }
+                     if (confirm("Supprimer cette question ?")) { blockToRemove.remove(); this.renumberQuestionHeaders(); }
+                 },
+
+                renumberQuestionHeaders() { /* Identique */
+                    console.log("Renumbering headers...");
+                     document.querySelectorAll('.question-creator-block').forEach((block, index) => {
+                         const h3 = block.querySelector('h3');
+                         if (h3) { h3.textContent = `Question ${index + 1}`; } // Numérotation 1, 2, 3...
+                         else { console.warn("Could not find h3 in block:", block); }
+                     });
+                 },
+
+                 updateInputType(checkbox) { /* Identique */
+                    const questionBlock = checkbox.closest('.question-creator-block'); const optionsList = questionBlock.querySelector('.options-creator');
+                    const isMultiple = checkbox.checked; const newType = isMultiple ? 'checkbox' : 'radio'; const questionId = questionBlock.id.split('-')[2];
+                    optionsList.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(input => {
+                        if(input.closest('.option-item')) {
+                            input.type = newType; input.checked = false; input.name = `correct-${questionId}${isMultiple ? '[]' : ''}`;
+                            if (newType === 'checkbox') { input.removeAttribute('required'); } else { input.setAttribute('required', 'required'); }
+                        }
+                    });
+                 },
+
+                saveQuiz() { /* Identique à la V précédente */
+                    const title = dom.creator.quizTitleInput.value.trim(); if (!title) { this.showFeedback("Titre obligatoire.", "error"); return; }
+                    const questions = []; let allQuestionsValid = true; const questionBlocks = dom.creator.questionsContainer.querySelectorAll('.question-creator-block');
+                    questionBlocks.forEach((block, index) => {
+                        const currentQuestionNumber = index + 1; const questionText = block.querySelector('.question-text-input').value.trim();
+                        const allowMultiple = block.querySelector('.allow-multiple').checked; const optionsData = []; const optionItems = block.querySelectorAll('.options-creator .option-item');
+                        let correctIndices = []; let hasSelectedAnswer = false;
+                        if (!questionText) { this.showFeedback(`Texte manquant Q${currentQuestionNumber}.`, "error"); allQuestionsValid = false; return; }
+                        if (optionItems.length < 2) { this.showFeedback(`Q${currentQuestionNumber}: min 2 options.`, "error"); allQuestionsValid = false; return; }
+                        optionItems.forEach((item) => {
+                            const optionText = item.querySelector('.option-text-input').value.trim(); const optionInput = item.querySelector('input[type="radio"], input[type="checkbox"]'); const optionIndex = parseInt(optionInput.value);
+                            if (!optionText) { this.showFeedback(`Texte option manquant Q${currentQuestionNumber}.`, "error"); allQuestionsValid = false; }
+                            optionsData.push({ text: optionText, index: optionIndex }); if (optionInput.checked) { correctIndices.push(optionIndex); hasSelectedAnswer = true; }
+                        });
+                        if (!allQuestionsValid) return; if (!hasSelectedAnswer) { this.showFeedback(`Aucune rép. correcte Q${currentQuestionNumber}.`, "error"); allQuestionsValid = false; return; }
+                        if (!allowMultiple && correctIndices.length > 1) { this.showFeedback(`Choix unique mais >1 rép. Q${currentQuestionNumber}.`, "error"); allQuestionsValid = false; return; }
+                        optionsData.sort((a, b) => a.index - b.index);
+                        questions.push({ text: questionText, options: optionsData.map(opt => opt.text), allowMultiple: allowMultiple, correctAnswerIndices: allowMultiple ? correctIndices : [correctIndices[0]] });
+                    });
+                    if (!allQuestionsValid) return; if (questions.length === 0) { this.showFeedback("Ajoutez au moins une question.", "error"); return; }
+                    const quizData = { id: state.editingQuizId || `quiz_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`, title: title, questions: questions };
+                    if (this.saveQuizToStorage(quizData)) { this.showFeedback(`Quiz "${quizData.title}" ${state.editingQuizId ? 'mis à jour' : 'sauvegardé'}!`, "success"); this.clearCreatorForm(); this.switchMode('manager'); }
+                 },
+
+                loadQuizForEditing(quizId) {
+                    const quizData = state.savedQuizzes[quizId]; if (!quizData) { this.showFeedback("Quiz non trouvé.", "error"); return; }
+                    state.editingQuizId = quizId; state.currentQuizInCreator = JSON.parse(JSON.stringify(quizData));
+                    dom.creator.editingQuizIdInput.value = quizId; dom.creator.quizTitleInput.value = quizData.title; dom.creator.questionsContainer.innerHTML = '';
+                    quizData.questions.forEach((question, qIndex) => {
+                        questionCounter++; // **** CORRECTION : Incrémente le compteur global ****
+                        const questionBlockId = questionCounter; // **** CORRECTION : Utilise la nouvelle valeur unique ****
+                        const questionDiv = document.createElement('div'); questionDiv.classList.add('question-creator-block'); questionDiv.id = `question-block-${questionBlockId}`;
+                        const allowMultipleChecked = question.allowMultiple ? 'checked' : ''; let optionsHTML = ''; const inputType = question.allowMultiple ? 'checkbox' : 'radio';
+                        const nameAttr = `correct-${questionBlockId}${question.allowMultiple ? '[]' : ''}`;
+                        question.options.forEach((optText, optIndex) => {
+                            const isChecked = question.correctAnswerIndices.includes(optIndex) ? 'checked' : ''; const deleteBtn = optIndex > 1 ? `<button type="button" class="button-link" onclick="app.removeOptionFromQuestion(this)">Supprimer</button>` : '';
+                            optionsHTML += `<div class="option-item" data-option-index="${optIndex}"><input type="${inputType}" name="${nameAttr}" value="${optIndex}" ${isChecked} ${inputType === 'radio' ? 'required' : ''}><input type="text" class="option-text-input" placeholder="Option ${optIndex + 1}" value="${optText}">${deleteBtn}</div>`;
+                        });
+                        questionDiv.innerHTML = `<button type="button" class="button button-small button-danger delete-question-btn" onclick="app.removeQuestionBlock('${questionBlockId}')">...</button><h3>Question ${qIndex + 1}</h3><div class="form-group"><label for="qtext-${questionBlockId}">Texte:</label><input type="text" id="qtext-${questionBlockId}" class="question-text-input" value="${question.text}"></div><div class="form-group"><label>Options:</label><label style="font-weight: normal; font-size: 0.9em;"> Plusieurs rép. correctes ? <input type="checkbox" class="allow-multiple" ${allowMultipleChecked} onchange="app.updateInputType(this)"></label><div class="options-creator" id="options-list-${questionBlockId}">${optionsHTML}</div><button type="button" class="button button-small add-option-btn button-secondary" onclick="app.addOptionToQuestion(this)">+ Ajouter Option</button></div>`;
+                        dom.creator.questionsContainer.appendChild(questionDiv);
+                    });
+                    this.renumberQuestionHeaders(); this.switchMode('creator');
+                 },
+
+                 // --- Taker Logic (Identique à V précédente) ---
+                 startQuiz(quizId) {
+                     const quizData = state.savedQuizzes[quizId]; if (!quizData) { this.showFeedback("Quiz introuvable.", "error"); return; }
+                     state.quizTakingState = { quizId: quizId, quizData: JSON.parse(JSON.stringify(quizData)), currentQuestionIndex: 0, userAnswers: new Array(quizData.questions.length).fill(null), isCurrentQuestionValidated: false, score: 0 };
+                     dom.taker.title.textContent = state.quizTakingState.quizData.title; this.displayCurrentQuestion(); this.switchMode('taker');
+                 },
+                displayCurrentQuestion() {
+                    const stateTake = state.quizTakingState; if (!stateTake.quizData?.questions?.[stateTake.currentQuestionIndex]) { console.error("Invalid quiz data/index."); this.showFeedback("Erreur affichage question.", "error"); this.switchMode('manager'); return; }
+                    const question = stateTake.quizData.questions[stateTake.currentQuestionIndex]; const quizArea = dom.taker.displayArea; quizArea.innerHTML = ''; stateTake.isCurrentQuestionValidated = false;
+                    const questionElement = document.createElement('div'); questionElement.classList.add('quiz-question'); questionElement.id = `quiz-question-${stateTake.currentQuestionIndex}`;
+                    const questionText = document.createElement('p'); questionText.textContent = `${stateTake.currentQuestionIndex + 1}. ${question.text}`; questionElement.appendChild(questionText);
+                    const optionsDiv = document.createElement('div'); optionsDiv.classList.add('quiz-options');
+                    question.options.forEach((option, index) => {
+                        const label = document.createElement('label'); const input = document.createElement('input'); input.type = 'checkbox'; input.name = `q${stateTake.currentQuestionIndex}`; input.value = index; input.dataset.questionIndex = stateTake.currentQuestionIndex;
+                        label.appendChild(input); const optionTextNode = document.createElement('span'); optionTextNode.textContent = ` ${option}`; label.appendChild(optionTextNode); optionsDiv.appendChild(label);
+                    });
+                    questionElement.appendChild(optionsDiv);
+                    const validationArea = document.createElement('div'); validationArea.classList.add('question-validation-area'); validationArea.innerHTML = `<button type="button" class="button button-warning validate-answer-btn" onclick="app.validateCurrentAnswer(this)">Valider ma réponse</button>`;
+                    questionElement.appendChild(validationArea); quizArea.appendChild(questionElement);
+                    dom.taker.nextBtn.style.display = 'none'; dom.taker.submitBtn.style.display = 'none';
+                 },
+                 validateCurrentAnswer(validateButton) {
+                    const questionElement = validateButton.closest('.quiz-question'); const questionIndex = parseInt(questionElement.id.split('-')[2]);
+                    const stateTake = state.quizTakingState; const question = stateTake.quizData.questions[questionIndex]; const optionsContainer = questionElement.querySelector('.quiz-options');
+                    const checkboxes = optionsContainer.querySelectorAll('input[type="checkbox"]'); const userCheckedIndices = [];
+                    checkboxes.forEach(chk => { if (chk.checked) userCheckedIndices.push(parseInt(chk.value)); }); stateTake.userAnswers[questionIndex] = [...userCheckedIndices];
+                    checkboxes.forEach(chk => {
+                        const label = chk.parentElement; const optionIndex = parseInt(chk.value); const isCorrect = question.correctAnswerIndices.includes(optionIndex); const isChecked = chk.checked;
+                        label.classList.remove('correct-feedback', 'incorrect-feedback', 'missed-feedback'); if (isChecked && isCorrect) label.classList.add('correct-feedback'); else if (isChecked && !isCorrect) label.classList.add('incorrect-feedback'); else if (!isChecked && isCorrect) label.classList.add('missed-feedback');
+                        chk.disabled = true; label.classList.add('disabled');
+                    });
+                    validateButton.disabled = true; validateButton.style.display = 'none'; stateTake.isCurrentQuestionValidated = true;
+                    if (stateTake.currentQuestionIndex < stateTake.quizData.questions.length - 1) { dom.taker.nextBtn.style.display = 'inline-flex'; } else { dom.taker.submitBtn.style.display = 'inline-flex'; }
+                 },
+                 nextQuestion() {
+                     if (!state.quizTakingState.isCurrentQuestionValidated) { alert("Validez votre réponse d'abord."); return; }
+                     state.quizTakingState.currentQuestionIndex++;
+                     if (state.quizTakingState.currentQuestionIndex < state.quizTakingState.quizData.questions.length) this.displayCurrentQuestion();
+                 },
+                submitQuiz() {
+                     if (!state.quizTakingState.isCurrentQuestionValidated) { alert("Validez la dernière réponse d'abord."); return; }
+                     state.quizTakingState.score = 0;
+                     state.quizTakingState.quizData.questions.forEach((question, index) => {
+                         const userAnswerIndices = state.quizTakingState.userAnswers[index] ?? []; const correctAnswerIndicesSet = new Set(question.correctAnswerIndices); const userAnswerIndicesSet = new Set(userAnswerIndices); let questionCorrect = false;
+                         if (userAnswerIndices.length > 0) {
+                             if (question.allowMultiple) { if (correctAnswerIndicesSet.size === userAnswerIndicesSet.size && [...correctAnswerIndicesSet].every(val => userAnswerIndicesSet.has(val))) { questionCorrect = true; } }
+                             else { if (userAnswerIndicesSet.size === 1 && userAnswerIndicesSet.has(question.correctAnswerIndices[0])) { questionCorrect = true; } }
+                         }
+                         if (questionCorrect) { state.quizTakingState.score++; }
+                     });
+                     dom.results.displayArea.innerHTML = `Vous avez obtenu <span>${state.quizTakingState.score}</span> sur <span>${state.quizTakingState.quizData.questions.length}</span> !`;
+                     this.switchMode('results');
+                 },
+                 quitQuiz() {
+                     if (confirm("Quitter ce quiz ? Progression perdue.")) {
+                         state.quizTakingState = { quizId: null, quizData: null, currentQuestionIndex: 0, userAnswers: [], isCurrentQuestionValidated: false, score: 0 };
+                         this.switchMode('manager');
+                     }
+                 },
+
+             }; // Fin objet app
+
+             // --- Initialisation ---
+             document.addEventListener('DOMContentLoaded', () => { app.init(); });
+
+        })(); // Fin IIFE
+    </script>
+
+</body>
+</html>
